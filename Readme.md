@@ -11,7 +11,7 @@ Kue is a priority job queue backed by [redis](http://redis.io), built for [node.
 
 **PROTIP** This is the latest Kue documentation, make sure to also read the [changelist](History.md).
 
-
+## Additions in this Fork:
 
 ## Upgrading from 0.8 to 0.9
   - [Upgrade Guide](https://github.com/Automattic/kue/wiki/Upgrading-to-0.9.x)
