@@ -1,3 +1,41 @@
+0.10.3 / 2015-11-20
+===================
+
+* Fixing Job processing order without munging the job id, Closes #708, Closes #678
+
+
+0.10.2 / 2015-11-20
+===================
+
+* Add support for ioredis, Closes #652
+* Add support for Redis Cluster, Closes #642
+* Fix `this.state` on refreshTTL 
+
+
+0.10.0 / 2015-11-20
+===================
+
+* Update TTL on job progress, Closes #694
+* Upgrade to node_redis 2.3,  #717
+* Fix LPUSH vs connection quit race when shutting down
+* Restart task btn, #754
+* Fix uncaught exception in job.js, #751
+* Added kue-dashboard script for conveniently running the dashboard #611
+* Fixed invalid CSS on production, #755
+* Connection string not supporting DB number #725
+* Fix attempts remaining logic, #742
+* Update jade, #741
+* Properly set job IDs in test mode, #727
+* Enhanced Job.log formatting, #630
+* Use node's util#format() in Job.log, #724
+
+
+0.9.6 / 2015-10-06
+===================
+
+* Fix redirection issue
+
+
 0.9.5 / 2015-09-16
 ===================
 

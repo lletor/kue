@@ -13,8 +13,9 @@ Kue is a priority job queue backed by [redis](http://redis.io), built for [node.
 
 ## Additions in this Fork:
 
-## Upgrading from 0.8 to 0.9
-  - [Upgrade Guide](https://github.com/Automattic/kue/wiki/Upgrading-to-0.9.x)
+## Upgrade Notes (Please Read)
+  - [0.9 -> 0.10](https://github.com/Automattic/kue/wiki/Upgrading-to-0.10.x)
+  - [0.8 ->  0.9](https://github.com/Automattic/kue/wiki/Upgrading-to-0.9.x)
 
 
 ## Requirements
@@ -173,6 +174,14 @@ Job-specific logs enable you to expose information to the UI at any point in the
 job.log('$%d sent to %s', amount, user.name);
 ```
 
+or anything else (uses [util.inspect()](https://nodejs.org/api/util.html#util_util_inspect_object_options) internally):
+
+```js
+job.log({key: 'some key', value: 10});
+job.log({[1,2,3,5,8]});
+job.log(10.1);
+```
+
 ### Job Progress
 
 Job progress is extremely useful for long-running jobs such as video conversion. To update the job's progress simply invoke `job.progress(completed, total [, data])`:
@@ -322,7 +331,7 @@ queue.process('email', function(job, ctx, done){
 
 ### Updating Progress
 
-For a "real" example, let's say we need to compile a PDF from numerous slides with [node-canvas](http://github.com/learnboost/node-canvas). Our job may consist of the following data, note that in general you should _not_ store large data in the job it-self, it's better to store references like ids, pulling them in while processing.
+For a "real" example, let's say we need to compile a PDF from numerous slides with [node-canvas](https://github.com/Automattic/node-canvas). Our job may consist of the following data, note that in general you should _not_ store large data in the job it-self, it's better to store references like ids, pulling them in while processing.
 
 ```js
 queue.create('slideshow pdf', {
@@ -402,7 +411,7 @@ This can be achieved in two ways:
   });
   ```
 
-  This is the softest and best solution, however is not built-in with Kue. Please refer to [this discussion](https://github.com/kriskowal/q/issues/120). You can comment on this feature in the related open Kue [issue](https://github.com/LearnBoost/kue/pull/403).
+  This is the softest and best solution, however is not built-in with Kue. Please refer to [this discussion](https://github.com/kriskowal/q/issues/120). You can comment on this feature in the related open Kue [issue](https://github.com/Automattic/kue/pull/403).
 
   You can also use promises to do something like
 
@@ -424,7 +433,7 @@ This can be achieved in two ways:
   process.once( 'uncaughtException', function(err){
     console.error( 'Something bad happened: ', err );
     queue.shutdown( 1000, function(err2){
-      console.error( 'Kue shutdown result: ', err||'OK' );
+      console.error( 'Kue shutdown result: ', err2 || 'OK' );
       process.exit( 0 );
     });
   });
@@ -432,13 +441,15 @@ This can be achieved in two ways:
 
 ### Unstable Redis connections
 
-Kue currently uses client side job state management and when redis crashes in the middle of that operations, some stuck jobs or index inconsistencies will happen. If you are facing poor redis connections or an unstable redis service you can start Kue's watchdog to fix stuck inactive jobs (if any) by calling:
+Kue currently uses client side job state management and when redis crashes in the middle of that operations, some stuck jobs or index inconsistencies will happen. The consequence is that certain number of jobs will be stuck, and be pulled out by worker only when new jobs are created, if no more new jobs are created, they stuck forever. So we **strongly** suggest that you run watchdog to fix this issue by calling:
 
 ```js
-queue.watchStuckJobs()
+queue.watchStuckJobs(interval)
 ```
 
-Kue will be refactored to fully atomic job state management from version 1.0 and this will happen by lua scripts and/or BRPOPLPUSH combination. You can read more [here](https://github.com/LearnBoost/kue/issues/130) and [here](https://github.com/LearnBoost/kue/issues/38).
+`interval` is in milliseconds and defaults to 1000ms
+
+Kue will be refactored to fully atomic job state management from version 1.0 and this will happen by lua scripts and/or BRPOPLPUSH combination. You can read more [here](https://github.com/Automattic/kue/issues/130) and [here](https://github.com/Automattic/kue/issues/38).
 
 ## Queue Maintenance
 
@@ -604,10 +615,40 @@ var q = kue.createQueue({
 
 **Note** *that all `<0.8.x` client codes should be refactored to pass redis options to `Queue#createQueue` instead of monkey patched style overriding of `redis#createClient` or they will be broken from Kue `0.8.x`.*
 
+#### Using ioredis client with cluster support
+
+```javascript
+
+var Redis = require('ioredis');
+var kue = require('kue');
+
+// using https://github.com/72squared/vagrant-redis-cluster
+
+var queue = kue.createQueue({
+    redis: {
+      createClientFactory: function () {
+        return new Redis.Cluster([{
+          port: 7000
+        }, {
+          port: 7001
+        }]);
+      }
+    }
+  });
+```
 
 ## User-Interface
 
-The UI is a small [Express](http://github.com/visionmedia/express) application, to fire it up simply run the following, altering the port etc as desired.
+The UI is a small [Express](https://github.com/strongloop/express) application.
+A script is provided in `bin/` for running the interface as a standalone application
+with default settings. You may pass in options for the port and redis-url. For example:
+
+```
+node_modules/kue/bin/kue-dashboard -p 3050 -r redis://127.0.0.1:3000
+```
+
+You can fire it up from within another application too:
+
 
 ```js
 var kue = require('kue');
@@ -652,7 +693,7 @@ queue.create('email', {
 }).searchKeys( ['to', 'title'] ).save();
 ```
 
-Search feature is turned off by default from Kue `>=0.9.0`. Read more about this [here](https://github.com/LearnBoost/kue/issues/412). You should enable search indexes in you need to:
+Search feature is turned off by default from Kue `>=0.9.0`. Read more about this [here](https://github.com/Automattic/kue/issues/412). You should enable search indexes in you need to:
 
 ```javascript
 var kue = require('kue');
@@ -761,8 +802,8 @@ You can create multiple jobs at once by passing an array. In this case, the resp
            }
          }]' http://localhost:3000/job
     [
-	    {"message": "job created", "id": 4},
-	    {"message": "job created", "id": 5}
+      {"message": "job created", "id": 4},
+      {"message": "job created", "id": 5}
     ]
 
 Note: when inserting multiple jobs in bulk, if one insertion fails Kue will keep processing the remaining jobs in order. The response array will contain the ids of the jobs added successfully, and any failed element will be an object describing the error: `{"error": "error reason"}`.
@@ -807,11 +848,16 @@ Now when you visit Kue's UI in the browser you'll see that jobs are being proces
 
 ## Securing Kue
 
-Through the use of app mounting you may customize the web application, enabling TLS, or adding additional middleware like Connect's `basicAuth()`.
+Through the use of app mounting you may customize the web application, enabling TLS, or adding additional middleware like `basic-auth-connect`.
+
+```bash
+$ npm install --save basic-auth-connect
+```
 
 ```js
+var basicAuth = require('basic-auth-connect');
 var app = express.createServer({ ... tls options ... });
-app.use(express.basicAuth('foo', 'bar'));
+app.use(basicAuth('foo', 'bar'));
 app.use(kue.app);
 app.listen(3000);
 ```
@@ -848,7 +894,7 @@ it('does something cool', function() {
 ## Screencasts
 
   - [Introduction](http://www.screenr.com/oyNs) to Kue
-  - API [walkthrough](http://vimeo.com/26963384) to Kue
+  - API [walkthrough](https://vimeo.com/26963384) to Kue
 
 ## License
 
